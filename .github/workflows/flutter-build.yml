@@ -60,9 +60,6 @@ jobs:
  #         name: bridge-artifact
  #         path: ./
 
-      - name: Install 7-Zip
-        run: choco install 7zip -y
-        shell: powershell
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
