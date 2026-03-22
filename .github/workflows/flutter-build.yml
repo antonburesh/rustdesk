@@ -1,21 +1,9 @@
 name: Build the flutter version of the RustDesk
 
 on:
-  workflow_call:
-    inputs:
-      upload-artifact:
-        type: boolean
-        default: true
-      upload-tag:
-        type: string
-        default: "nightly"
-
-# NOTE: F-Droid builder script 'flutter/build_fdroid.sh' reads environment
-# variables from this workflow!
-#
-# It does NOT read build steps, however, so please fix 'flutter/build_fdroid.sh
-# whenever you add changes to Android CI build action ('build-rustdesk-android')
-# in this file!
+  push:
+    branches:
+      - master
 
 env:
   SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
