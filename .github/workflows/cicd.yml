@@ -111,7 +111,7 @@ jobs:
       env:
         RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
         RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
-        VCPKG_ROOT: $VCPKG_ROOT
+        VCPKG_ROOT: C:\vcpkg
 
     # 15. Build Flutter Windows app
     - name: Build Flutter Windows
