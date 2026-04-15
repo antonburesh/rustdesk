@@ -18,7 +18,6 @@ env:
 jobs:
   build-windows:
     runs-on: windows-2022  # Изменено на windows-2022
-
     steps:
     # 1. Checkout исходников
     - name: Checkout RustDesk
