@@ -103,6 +103,11 @@ jobs:
         cd ..
         flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --llvm-path "$env:LLVM_PATH" --dart-output flutter/lib/generated_bridge.dart
 
+    - name: Setup Visual Studio environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
     # 14. Build Rust backend
     - name: Build Rust backend
       working-directory: rustdesk
