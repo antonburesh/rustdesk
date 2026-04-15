@@ -77,7 +77,7 @@ jobs:
 
     # 6. Install vcpkg dependencies
     - name: Install vcpkg packages
-      run: "$env:VCPKG_ROOT\vcpkg" install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+      run: & "$env:VCPKG_ROOT\vcpkg" install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
 
       # 7. Setup LLVM
