@@ -72,15 +72,11 @@ jobs:
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
         .\bootstrap-vcpkg.bat
-        echo "VCPKG_ROOT=${{ runner.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
-        echo "${{ runner.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-    # 6. Install vcpkg dependencies
-    - name: Install vcpkg packages
-      run: & "$env:VCPKG_ROOT\vcpkg" install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+        vcpkg.exe install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
 
-      # 7. Setup LLVM
+
+    # 7. Setup LLVM
     - name: Install LLVM
       run: |
         choco install llvm --version=12.0.0 -y
