@@ -78,7 +78,7 @@ jobs:
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Download RustDesk Flutter Engine
       run: |
-        $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/      windows-x64-release.zip"
+        $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip"
         Invoke-WebRequest -Uri $engineUrl -OutFile engine.zip
         $flutterCachePath = "$env:USERPROFILE\AppData\Local\flutter\bin\cache\artifacts\engine\windows-x64-release"
         New-Item -ItemType Directory -Force -Path $flutterCachePath
