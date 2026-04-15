@@ -62,25 +62,12 @@ jobs:
         flutter precache --windows
 
     # 5. Install vcpkg - ИСПРАВЛЕНО
-    - name: Install vcpkg manually
+    - name: Prepare vcpkg manually
       run: |
-        # Удаляем существующую папку если она есть
-        if (Test-Path "${{ runner.workspace }}\vcpkg") {
-          Remove-Item -Recurse -Force "${{ runner.workspace }}\vcpkg"
-        }
-
-        cd ${{ runner.workspace }}
-        git clone https://github.com/microsoft/vcpkg.git
-        cd vcpkg
-        .\bootstrap-vcpkg.bat
-
         # Добавляем vcpkg в PATH для текущей сессии
-        $vcpkgPath = "${{ runner.workspace }}\vcpkg"
+        $vcpkgPath = "C:\\vcpkg"
         echo "VCPKG_ROOT=$vcpkgPath" | Out-File -FilePath $env:GITHUB_ENV -Append
         echo "$vcpkgPath" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-        # Устанавливаем пакеты используя полный путь
-        & "$vcpkgPath\vcpkg.exe" install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
     # 6. Setup LLVM
     - name: Install LLVM
@@ -102,35 +89,10 @@ jobs:
     - name: Install ImageMagick
       run: choco install imagemagick -y
 
-    # 9. Setup Visual Studio
-    - name: Setup MSVC
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
-
     # 10. Install cargo tools
     - name: Install cargo-flutter-bridge
       run: |
         cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid
-
-    # 11. Apply patches (если есть)
-    - name: Apply custom patches
-      working-directory: rustdesk
-      run: |
-        if (Test-Path "../custom-patches/fix_wowvendor.patch") {
-          git apply ../custom-patches/fix_wowvendor.patch
-        }
-
-    # 12. Copy icon assets
-    - name: Copy assets
-      working-directory: rustdesk
-      run: |
-        if (Test-Path "res/icon.ico") {
-          Copy-Item "res/icon.ico" "flutter/windows/runner/resources/app_icon.ico" -Force
-        }
-        if (Test-Path "team_logo.svg") {
-          Copy-Item "team_logo.svg" "flutter/assets/icon.svg" -Force
-        }
 
     # 13. Generate Flutter-Rust bridge
     - name: Generate bridge code
@@ -150,7 +112,7 @@ jobs:
       env:
         RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
         RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
-        VCPKG_ROOT: ${{ runner.workspace }}\vcpkg
+        VCPKG_ROOT: $VCPKG_ROOT
 
     # 15. Build Flutter Windows app
     - name: Build Flutter Windows
