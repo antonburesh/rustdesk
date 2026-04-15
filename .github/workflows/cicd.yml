@@ -69,11 +69,30 @@ jobs:
         echo "VCPKG_ROOT=$vcpkgPath" | Out-File -FilePath $env:GITHUB_ENV -Append
         echo "$vcpkgPath" | Out-File -FilePath $env:GITHUB_PATH -Append
 
-    # 6. Setup LLVM
+      # 6. Setup LLVM - ИСПРАВЛЕННАЯ ВЕРСИЯ
     - name: Install LLVM
       run: |
+        # Удаляем старую версию LLVM если есть
+        if (Test-Path "C:\Program Files\LLVM") {
+          Remove-Item -Recurse -Force "C:\Program Files\LLVM" -ErrorAction SilentlyContinue
+        }
+
+        # Устанавливаем LLVM 18.1.8 (более новую и стабильную)
+        choco install llvm --version=18.1.8 -y --force
+
+        # Проверяем установку
+        if (Test-Path "C:\Program Files\LLVM\bin\clang.exe") {
+          Write-Host "✅ LLVM installed successfully"
+          & "C:\Program Files\LLVM\bin\clang.exe" --version
+        } else {
+          Write-Host "❌ LLVM installation failed"
+          exit 1
+        }
+
+        # Устанавливаем переменные
         echo "LLVM_PATH=C:\Program Files\LLVM" | Out-File -FilePath $env:GITHUB_ENV -Append
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+        echo "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
 
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Download RustDesk Flutter Engine
