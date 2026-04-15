@@ -62,12 +62,7 @@ jobs:
         flutter doctor -v
         flutter precache --windows
 
-    # 5. Setup vcpkg - ИСПРАВЛЕННАЯ ВЕРСИЯ
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
-        vcpkgGitCommitId: '2024.01.12'  # Это не работает, нужно использовать SHA
+
 
     # Альтернативный способ - ручная установка vcpkg
     - name: Install vcpkg manually
