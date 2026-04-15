@@ -103,10 +103,16 @@ jobs:
         cd ..
         flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --llvm-path "$env:LLVM_PATH" --dart-output flutter/lib/generated_bridge.dart
 
-    - name: Setup Visual Studio environment
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
+    # Или более простой способ - установить через chocolatey
+    - name: Install Visual Studio Build Tools
+      run: |
+        choco install visualstudio2022-buildtools --yes
+        choco install visualstudio2022-workload-vctools --yes --params "--add Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.Windows10SDK.20348"
+        # Обновляем переменные окружения
+        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build"
+        if (Test-Path $vsPath) {
+          echo "$vsPath" | Out-File -FilePath $env:GITHUB_PATH -Append
+        }
 
     # 14. Build Rust backend
     - name: Build Rust backend
