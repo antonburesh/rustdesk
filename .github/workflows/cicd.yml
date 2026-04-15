@@ -1,0 +1,233 @@
+name: RustDesk Windows CI/CD
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  VCPKG_ROOT: C:\vcpkg
+  VCPKG_DEFAULT_TRIPLET: x64-windows-static
+  FLUTTER_VERSION: 3.24.5
+
+jobs:
+  build-windows:
+    runs-on: Windows  # Используем windows-2022 для лучшей совместимости
+
+    steps:
+    # 1. Checkout исходников
+    - name: Checkout RustDesk
+      uses: actions/checkout@v4
+      with:
+        repository: rustdesk/rustdesk
+        path: rustdesk
+        submodules: recursive
+
+    - name: Checkout custom patches (опционально)
+      uses: actions/checkout@v4
+      with:
+        path: custom-patches
+
+    # 2. Setup Rust
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: x86_64-pc-windows-msvc
+        default: true
+        override: true
+
+    # 3. Setup Python
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 4. Setup Flutter
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: stable
+        cache: true
+
+    - name: Enable Windows Desktop
+      run: |
+        flutter config --enable-windows-desktop
+        flutter doctor -v
+        flutter precache --windows
+
+    # 5. Setup vcpkg - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+        vcpkgGitCommitId: '2024.01.12'  # Это не работает, нужно использовать SHA
+
+    # Альтернативный способ - ручная установка vcpkg
+    - name: Install vcpkg manually
+      if: always()
+      run: |
+        cd ${{ runner.workspace }}
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
+        echo "VCPKG_ROOT=${{ runner.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "${{ runner.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+    # 6. Install vcpkg dependencies
+    - name: Install vcpkg packages
+      run: |
+        & "$env:VCPKG_ROOT\vcpkg" install libvpx:x64-windows-static
+        & "$env:VCPKG_ROOT\vcpkg" install libyuv:x64-windows-static
+        & "$env:VCPKG_ROOT\vcpkg" install opus:x64-windows-static
+        & "$env:VCPKG_ROOT\vcpkg" install aom:x64-windows-static
+        & "$env:VCPKG_ROOT\vcpkg" install ffmpeg:x64-windows-static
+
+    # 7. Setup LLVM
+    - name: Install LLVM
+      run: |
+        choco install llvm --version=12.0.0 -y
+        echo "LLVM_PATH=C:\Program Files\LLVM" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+    # 8. Download Flutter Engine (RustDesk custom)
+    - name: Download RustDesk Flutter Engine
+      run: |
+        $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip"
+        Invoke-WebRequest -Uri $engineUrl -OutFile engine.zip
+        $flutterCachePath = "$env:USERPROFILE\AppData\Local\flutter\bin\cache\artifacts\engine\windows-x64-release"
+        New-Item -ItemType Directory -Force -Path $flutterCachePath
+        Expand-Archive -Path engine.zip -DestinationPath $flutterCachePath -Force
+
+    # 9. Install ImageMagick
+    - name: Install ImageMagick
+      run: choco install imagemagick -y
+
+    # 10. Setup Visual Studio
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    # 11. Install cargo tools
+    - name: Install cargo-flutter-bridge
+      run: |
+        cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid
+
+    # 12. Apply patches (если есть)
+    - name: Apply custom patches
+      working-directory: rustdesk
+      run: |
+        if (Test-Path "../custom-patches/fix_wowvendor.patch") {
+          git apply ../custom-patches/fix_wowvendor.patch
+        }
+
+    # 13. Copy icon assets
+    - name: Copy assets
+      working-directory: rustdesk
+      run: |
+        if (Test-Path "res/icon.ico") {
+          Copy-Item "res/icon.ico" "flutter/windows/runner/resources/app_icon.ico" -Force
+        }
+        if (Test-Path "team_logo.svg") {
+          Copy-Item "team_logo.svg" "flutter/assets/icon.svg" -Force
+        }
+
+    # 14. Generate Flutter-Rust bridge
+    - name: Generate bridge code
+      working-directory: rustdesk
+      run: |
+        cd flutter
+        flutter clean
+        flutter pub get
+        cd ..
+        flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --llvm-path "$env:LLVM_PATH" --dart-output flutter/lib/generated_bridge.dart
+
+    # 15. Build Rust backend
+    - name: Build Rust backend
+      working-directory: rustdesk
+      run: |
+        python3 build.py --flutter
+      env:
+        RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+        RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+
+    # 16. Build Flutter Windows app
+    - name: Build Flutter Windows
+      working-directory: rustdesk/flutter
+      run: flutter build windows --release
+
+    # 17. Prepare output directory
+    - name: Prepare artifacts
+      working-directory: rustdesk
+      run: |
+        $outDir = "Release"
+        if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
+        New-Item -ItemType Directory -Force -Path $outDir
+
+        # Copy Flutter build
+        $flutterBuildPath = "flutter/build/windows/x64/runner/Release"
+        if (Test-Path $flutterBuildPath) {
+          Copy-Item "$flutterBuildPath/*" "$outDir/" -Recurse -Force
+        }
+
+        # Copy Rust binaries if exist
+        if (Test-Path "target/release/rustdesk.exe") {
+          Copy-Item "target/release/rustdesk.exe" "$outDir/" -Force
+        }
+        if (Test-Path "target/release/rustdesk_host.exe") {
+          Copy-Item "target/release/rustdesk_host.exe" "$outDir/" -Force
+        }
+
+        # Copy vcpkg DLLs if needed
+        $vcpkgBinPath = "$env:VCPKG_ROOT\installed\x64-windows-static\bin"
+        if (Test-Path $vcpkgBinPath) {
+          Copy-Item "$vcpkgBinPath/*.dll" "$outDir/" -Force
+        }
+
+        Write-Host "Build artifacts prepared in $outDir"
+        Get-ChildItem $outDir
+
+    # 18. Upload artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rustdesk-windows-x64-${{ github.run_number }}
+        path: rustdesk/Release/
+        retention-days: 30
+
+    # 19. Create GitHub Release (только при push в main)
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: nightly-${{ github.run_number }}
+        name: Nightly Build ${{ github.run_number }}
+        draft: false
+        prerelease: true
+        files: rustdesk/Release/*.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 20. Cache dependencies
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          rustdesk/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustdesk/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
+    - name: Cache vcpkg packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ runner.workspace }}/vcpkg/installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('rustdesk/vcpkg.json') }}
+        restore-keys: ${{ runner.os }}-vcpkg-
