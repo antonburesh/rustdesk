@@ -76,7 +76,6 @@ jobs:
         if (Test-Path "C:\Program Files\LLVM") {
           Remove-Item -Recurse -Force "C:\Program Files\LLVM" -ErrorAction SilentlyContinue
         }
-
         # Устанавливаем LLVM 18.1.8 (более новую и стабильную)
         choco install llvm --version=18.1.8 -y --force
 
