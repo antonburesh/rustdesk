@@ -37,10 +37,45 @@ jobs:
     - name: Download RustDesk Flutter Engine
       run: |
         $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip"
-        Invoke-WebRequest -Uri $engineUrl -OutFile engine.zip
-        $flutterCachePath = "$env:USERPROFILE\AppData\Local\flutter\bin\cache\artifacts\engine\windows-x64-release"
-        New-Item -ItemType Directory -Force -Path $flutterCachePath
-        Expand-Archive -Path engine.zip -DestinationPath $flutterCachePath -Force
+        $tempZip = "engine.zip"
+        $tempExtract = "engine_temp"
+
+        # Скачиваем архив
+        Write-Host "Downloading from $engineUrl"
+        Invoke-WebRequest -Uri $engineUrl -OutFile $tempZip
+
+        # Создаем временную папку для распаковки
+        New-Item -ItemType Directory -Force -Path $tempExtract
+
+        # Распаковываем архив
+        Write-Host "Extracting archive..."
+        Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+        # Находим папку windows-x64-release в распакованном содержимом
+        $sourceFolder = Get-ChildItem -Path $tempExtract -Directory -Recurse | Where-Object { $_.Name -eq "windows-x64-release" } | Select-Object -First 1
+
+        if ($sourceFolder) {
+            # Целевая папка в github.workspace
+            $destinationFolder = "${{ github.workspace }}\windows-x64-release"
+
+            # Копируем папку
+            Write-Host "Copying from $($sourceFolder.FullName) to $destinationFolder"
+            Copy-Item -Path $sourceFolder.FullName -Destination $destinationFolder -Recurse -Force
+
+            Write-Host "✅ Successfully copied windows-x64-release to $destinationFolder"
+
+            # Дополнительно: показываем содержимое для проверки
+            Get-ChildItem $destinationFolder
+        } else {
+            Write-Error "❌ Could not find 'windows-x64-release' folder in the downloaded archive"
+            exit 1
+        }
+
+        # Очистка временных файлов
+        Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+        Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+
+        Write-Host "✅ Cleanup completed"
 
 
       # 13. Generate Flutter-Rust bridge
