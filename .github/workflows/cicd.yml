@@ -32,6 +32,13 @@ jobs:
       with:
         path: custom-patches
 
+    - name: Clone vcpkg (stable snapshot)
+      run: |
+        git clone https://github.com/microsoft/vcpkg C:\vcpkg
+        cd C:\vcpkg
+        git checkout 2023.12.12
+        bootstrap-vcpkg.bat
+
 
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Copy RustDesk Flutter Engine
