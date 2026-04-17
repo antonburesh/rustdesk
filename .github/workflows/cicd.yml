@@ -32,7 +32,7 @@ jobs:
       with:
         path: custom-patches
 
-  
+
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Download RustDesk Flutter Engine
       run: |
@@ -43,7 +43,7 @@ jobs:
         Expand-Archive -Path engine.zip -DestinationPath $flutterCachePath -Force
 
 
-    # 13. Generate Flutter-Rust bridge
+      # 13. Generate Flutter-Rust bridge
     - name: Generate bridge code
       working-directory: rustdesk
       run: |
@@ -51,8 +51,7 @@ jobs:
         flutter clean
         flutter pub get
         cd ..
-        flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --llvm-path "$env:LLVM_PATH" --dart-output flutter/lib/generated_bridge.dart
-
+        flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --dart-output flutter/lib/generated_bridge.dart
 
     # 14. Build Rust backend
     - name: Build Rust backend
