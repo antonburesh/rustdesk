@@ -32,67 +32,7 @@ jobs:
       with:
         path: custom-patches
 
-    # 2. Setup Rust
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: x86_64-pc-windows-msvc
-        default: true
-        override: true
-
-    # 3. Setup Python
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    # 4. Setup Flutter
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: stable
-        cache: true
-
-    - name: Enable Windows Desktop
-      run: |
-        flutter config --enable-windows-desktop
-        flutter doctor -v
-        flutter precache --windows
-
-    # 5. Install vcpkg - ИСПРАВЛЕНО
-    - name: Prepare vcpkg manually
-      run: |
-        # Добавляем vcpkg в PATH для текущей сессии
-        $vcpkgPath = "C:\vcpkg"
-        echo "VCPKG_ROOT=$vcpkgPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-        echo "$vcpkgPath" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-      # 6. Setup LLVM - ИСПРАВЛЕННАЯ ВЕРСИЯ
-    - name: Install LLVM
-      run: |
-        # Удаляем старую версию LLVM если есть
-        if (Test-Path "C:\Program Files\LLVM") {
-          Remove-Item -Recurse -Force "C:\Program Files\LLVM" -ErrorAction SilentlyContinue
-        }
-        # Устанавливаем LLVM 18.1.8 (более новую и стабильную)
-        choco install llvm --version=18.1.8 -y --force
-
-        # Проверяем установку
-        if (Test-Path "C:\Program Files\LLVM\bin\clang.exe") {
-          Write-Host "✅ LLVM installed successfully"
-          & "C:\Program Files\LLVM\bin\clang.exe" --version
-        } else {
-          Write-Host "❌ LLVM installation failed"
-          exit 1
-        }
-
-        # Устанавливаем переменные
-        echo "LLVM_PATH=C:\Program Files\LLVM" | Out-File -FilePath $env:GITHUB_ENV -Append
-        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-        echo "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
-
+  
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Download RustDesk Flutter Engine
       run: |
@@ -102,14 +42,6 @@ jobs:
         New-Item -ItemType Directory -Force -Path $flutterCachePath
         Expand-Archive -Path engine.zip -DestinationPath $flutterCachePath -Force
 
-    # 8. Install ImageMagick
-    - name: Install ImageMagick
-      run: choco install imagemagick -y
-
-    # 10. Install cargo tools
-    - name: Install cargo-flutter-bridge
-      run: |
-        cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid
 
     # 13. Generate Flutter-Rust bridge
     - name: Generate bridge code
@@ -121,43 +53,6 @@ jobs:
         cd ..
         flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs --llvm-path "$env:LLVM_PATH" --dart-output flutter/lib/generated_bridge.dart
 
-
-      # 7. Setup Visual Studio (Альтернативный способ)
-    - name: Setup Visual Studio
-      run: |
-        # Ищем Visual Studio 2022
-        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-        $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-
-        if ($vsPath) {
-          $vcvarsPath = "$vsPath\VC\Auxiliary\Build\vcvars64.bat"
-          if (Test-Path $vcvarsPath) {
-            # Сохраняем путь для будущих шагов
-            echo "VSCMD_ARG_TGT_ARCH=x64" | Out-File -FilePath $env:GITHUB_ENV -Append
-            echo "VSCMD_ARG_HOST_ARCH=x64" | Out-File -FilePath $env:GITHUB_ENV -Append
-            echo "VCVARS_PATH=$vcvarsPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-            # Инициализируем для текущего шага
-            cmd /c "call `"$vcvarsPath`" x64 && set" | ForEach-Object {
-              if ($_ -match "^(.*?)=(.*)$") {
-                [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-              }
-            }
-            Write-Host "✅ Visual Studio environment configured"
-          }
-        } else {
-          Write-Host "⚠️ Visual Studio not found, installing..."
-          # Установка через chocolatey (только build tools, без workload)
-          choco install visualstudio2022buildtools --yes --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.20348 --passive --wait"
-
-          # Повторно ищем после установки
-          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if ($vsPath) {
-            $vcvarsPath = "$vsPath\VC\Auxiliary\Build\vcvars64.bat"
-            echo "VCVARS_PATH=$vcvarsPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-            Write-Host "✅ Visual Studio installed and configured"
-          }
-        }
 
     # 14. Build Rust backend
     - name: Build Rust backend
