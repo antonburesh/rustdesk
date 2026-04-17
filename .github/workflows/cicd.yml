@@ -39,7 +39,19 @@ jobs:
         git checkout 2023.12.12
         bootstrap-vcpkg.bat
 
+    - name: Install dependencies
+      run: |
+        C:\vcpkg\vcpkg install opus:x64-windows-static
+        C:\vcpkg\vcpkg install libvpx:x64-windows-static
+        C:\vcpkg\vcpkg install libyuv:x64-windows-static
+        C:\vcpkg\vcpkg install aom:x64-windows-static
 
+    - name: Export vcpkg env
+      run: |
+        echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+        echo "VCPKG_TARGET_TRIPLET=x64-windows-static" >> $env:GITHUB_ENV
+        
     # 7. Download Flutter Engine (RustDesk custom)
     - name: Copy RustDesk Flutter Engine
       run: |
