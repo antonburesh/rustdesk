@@ -16,4 +16,6 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Build Windows
-      run: ./wv.build.bat
+      run: |
+        cmd /c ./wv.build.bat
+      shell: powershell
