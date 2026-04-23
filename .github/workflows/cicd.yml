@@ -11,17 +11,18 @@ jobs:
   build:
     runs-on: Windows
 
-
     steps:
     - name: Checkout code
       run: |
         git clone ${{ github.server_url }}/${{ github.repository }} .
         git checkout ${{ github.sha }}
+      shell: cmd
 
     - name: Setup environment variables
       run: |
-        echo "VCPKG_ROOT=c:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
-        echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo VCPKG_ROOT=c:\vcpkg>> %GITHUB_ENV%
+        echo VCPKG_DEFAULT_TRIPLET=x64-windows-static>> %GITHUB_ENV%
+      shell: cmd
 
     - name: Build Windows
       run: |
@@ -100,6 +101,7 @@ jobs:
         echo BUILD SUCCESS
         echo Output: %OUT_DIR%
         echo ================================
+      shell: cmd
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
