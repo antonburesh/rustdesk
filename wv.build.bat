@@ -22,21 +22,21 @@ rem vcpkg install --triplet x64-windows-static
 
 
 :: --- Џа®ўҐаЄ  Rust ---
-where cargo >nul 2>nul
-if %errorlevel% neq 0 (
-echo [ERROR] Rust not installed!
-pause
-exit /b
-)
+:: where cargo >nul 2>nul
+:: if %errorlevel% neq 0 (
+:: echo [ERROR] Rust not installed!
+:: pause
+:: exit /b
+:: )
 
 
 :: --- Џа®ўҐаЄ  Flutter ---
-where flutter >nul 2>nul
-if %errorlevel% neq 0 (
-echo [ERROR] Flutter not installed!
-pause
-exit /b
-)
+:: where flutter >nul 2>nul
+:: if %errorlevel% neq 0 (
+:: echo [ERROR] Flutter not installed!
+:: pause
+:: exit /b
+:: )
 
 
 :: --- “бв ­ ў«Ёў Ґ¬ ЇҐаҐ¬Ґ­­лҐ ¤«п VS ---
