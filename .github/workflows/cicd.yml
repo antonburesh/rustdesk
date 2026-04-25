@@ -28,9 +28,31 @@ jobs:
           path: "*.exe"
           if-no-files-found: error
 
+  upload-to-yandex:
+    needs: build
+    runs-on: Windows
+    if: github.ref_name == 'main' || github.ref_name == 'master'
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: ./artifact
+
+      - name: Upload to Yandex Object Storage
+        uses: povetek/yandex-object-storage-action@v3
+        with:
+          access-key-id: ${{ secrets.YC_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.YC_SECRET_ACCESS_KEY }}
+          bucket: ${{ secrets.YC_BUCKET_NAME }}
+          path: ./artifact
+          clear: false
+
   release:
     needs: build
     runs-on: Windows
+    if: github.ref_name == 'main' || github.ref_name == 'master'
 
     steps:
       - name: Download artifact
@@ -45,12 +67,12 @@ jobs:
           name: "Release ${{ github.run_number }}"
           tag_name: "v${{ github.run_number }}"
           body: |
-            Автоматический билд RustDesk для Windows
+            Автоматический билд WowVendor.RDP для Windows
             
             Сборка #${{ github.run_number }}
             Коммит: ${{ github.sha }}
           draft: false
-          prerelease: true
+          prerelease: false
           files: ./artifact/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
